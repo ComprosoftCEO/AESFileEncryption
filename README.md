@@ -27,3 +27,9 @@ __afe (-e | -d) \[-r\] \<file\>__
 * -r = Replace the old file (optional)
 
 If -r is not specified, the new file will be named \<file\>.d or \<file\>.e
+
+<br>
+
+## Credits
+* AES implementation is from the repository [tiny-AES-c](https://github.com/kokke/tiny-AES-c) by kokke.
+* SHA-256 is from the repository [crypto-algorithms](https://github.com/B-Con/crypto-algorithms/) by Brad Conte (B-Con).
