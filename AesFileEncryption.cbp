@@ -50,6 +50,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="IO/dynamic-array.h" />
+		<Unit filename="IO/file-io.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="IO/file-io.h" />
 		<Unit filename="IO/get-password.c">
 			<Option compilerVar="CC" />
 		</Unit>
