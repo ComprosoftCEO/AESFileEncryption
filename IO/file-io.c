@@ -7,45 +7,73 @@
 #include <stdint.h>
 #include <string.h>
 
-//Public buffer that stores all file data
-const size_t File_Block_Len = AES_KEYLEN;
-
 typedef struct {
-    uint8_t* buffer;        //Buffer that stores the file data
-    size_t len;             //Total length of the buffer (same as File_Block_Len)
-    FILE* in_file;
-    FILE* out_file;
+    uint8_t* buffer;        // Buffer that stores the file data
+    size_t len;             // Total length of the buffer (same as File_Block_Len)
+    FILE* in_file;          // If NULL, then there is no out file
+    FILE* out_file;         // If NULL, then there is no in file
     char* backup_filename;
 } FILE_Obj_t;
 
 static int backup_file(FILE_Obj_t* fp);
+static void copy_file(FILE* in, FILE* out) ;
+
 
 //Automatically allocates the file object in memory
-int open_file(const char* input_file, const char* output_file, const char* bext, FILE_t** fp) {
-    if (!(fp && input_file && output_file && bext)) {return BAD_POINTER;}
+int open_file(const char* file, FILEMODE how, size_t buf_sz, FILE_t** fp) {
+    if (!(fp && file)) {return BAD_POINTER;}
 
     //Allocate data
     FILE_Obj_t* f = (FILE_Obj_t*) calloc(1,sizeof(FILE_Obj_t));
     if (!f) {return ALLOC_ERROR;}
-    f->buffer = (uint8_t*) malloc(sizeof(uint8_t) * File_Block_Len);
-    f->len = File_Block_Len;
-    if (!f->buffer) {close_file((FILE_t*) f); return ALLOC_ERROR;}
+    f->buffer = (uint8_t*) malloc(sizeof(uint8_t) * buf_sz);
+    if (!f->buffer) {
+        close_file((FILE_t*) f,C_NOTHING);
+        return ALLOC_ERROR;
+    }
+    f->len = buf_sz;
 
-    //Prepare the backup filename string
-    f->backup_filename = (char*) calloc(strlen(input_file) + strlen(bext)+1,sizeof(char));
-    strcpy(f->backup_filename,input_file);
-    strcat(f->backup_filename,bext);
 
-    f->in_file = fopen(input_file,"rb");
-    if (f->in_file == NULL)         {close_file((FILE_t*) f); return IN_OPEN_ERROR;}
-    if (backup_file(f) != NO_ERROR) {close_file((FILE_t*) f); return BACKUP_ERROR;}
+    how &= (F_READ | F_WRITE);  //Create the mask
+    if (how & F_READ) {         //Open the input file (if needed)
+        f->in_file = fopen(file,"rb");
+        if (f->in_file == NULL) {
+            close_file((FILE_t*) f,C_NOTHING);
+            return IN_OPEN_ERROR;
+        }
+    }
 
-    //Configure input and output files
-    f->in_file = fopen(f->backup_filename,"rb");
-    if (f->in_file == NULL) {close_file((FILE_t*) f); return BACKUP_ERROR;}
+    //Prepare the backup filename string (if needed)
+    if (how == F_READ_WRITE) {
+        f->backup_filename = (char*) calloc(strlen(file) + strlen(BAK_EXT)+1,sizeof(char));
+        if (!f->backup_filename) {
+            close_file((FILE_t*) f,C_NOTHING);
+            return ALLOC_ERROR;
+        }
 
-    f->out_file = fopen(output_file, "wb");
-    if (f->out_file == NULL) {close_file((FILE_t*) f); return OUT_OPEN_ERROR;}
+        strcpy(f->backup_filename,file);
+        strcat(f->backup_filename,BAK_EXT);
+        if (backup_file(f) != NO_ERROR) {
+            close_file((FILE_t*) f,C_REMOVE);
+            return BACKUP_ERROR;
+        }
+        fclose(f->in_file);
+
+        //Input file should read from backup file
+        f->in_file = fopen(f->backup_filename,"rb");
+        if (f->in_file == NULL) {
+            close_file((FILE_t*) f,C_REMOVE);
+            return BACKUP_ERROR;
+        }
+    }
+
+    if (how & F_WRITE) {
+        f->out_file = fopen(file, "wb");
+        if (f->out_file == NULL) {
+            close_file((FILE_t*) f,C_REMOVE);
+            return OUT_OPEN_ERROR;
+        }
+    }
 
     *fp = (FILE_t*) f;
     return NO_ERROR;
@@ -53,14 +81,19 @@ int open_file(const char* input_file, const char* output_file, const char* bext,
 
 
 //Automatically deallocates the file object from memory
-void close_file(FILE_t* fp) {
+void close_file(FILE_t* fp, CLOSE_ACTION action) {
     if (!fp) {return;}
 
     FILE_Obj_t* f = (FILE_Obj_t*) fp;
     if (f->buffer) {free(f->buffer);}
-    if (f->backup_filename) {free(f->backup_filename);}
+    if (f->backup_filename) {
+        if (action == C_REMOVE) {remove(f->backup_filename);}
+        if (action == C_UNDO) {copy_file(f->in_file,f->out_file);}
+        free(f->backup_filename);
+    }
     if (f->in_file)  {fclose(f->in_file);}
     if (f->out_file) {fclose(f->out_file);}
+
     free(fp);
 }
 
@@ -82,18 +115,33 @@ static int backup_file(FILE_Obj_t* fp) {
 }
 
 
+//Copy from one file to another
+static void copy_file(FILE* in, FILE* out) {
+
+    rewind(in);
+    rewind(out);
+
+    // Read contents from file
+    int c = fgetc(in);
+    while (c != EOF) {
+        fputc(c, out);
+        c = fgetc(in);
+    }
+}
+
 //Read a single AES block into the buffer
 //
 //  IF buf is null, then use fp->buf
 //
 //  The return is one of the following
-//      READ_ERROR      -> Unknown problem
+//      READ_ERROR (<0) -> Unknown problem
 //      NO_ERROR        -> Process this block as normal
 //      END_OF_FILE     -> This is the last block in the file, bytes_read is less than total
 int read_next_block(FILE_t* fp, uint8_t* buf, size_t to_read, size_t* bytes_read) {
     if (!(fp && bytes_read)) {return BAD_POINTER;}
 
     FILE_Obj_t* f = (FILE_Obj_t*) fp;
+    if (!f->in_file) {return WRONG_MODE;}
     if (!buf) {
         buf = fp->buffer;
         if (to_read > fp->len) {to_read = fp->len;}
@@ -119,13 +167,13 @@ int read_next_block(FILE_t* fp, uint8_t* buf, size_t to_read, size_t* bytes_read
 //  If buf is null, then use fp->buf
 //
 //  The return is either
-//      WRITE_ERROR     -> I don't know
+//      WRITE_ERROR (<0)-> I don't know
 //      NO_ERROR        -> Bytes written successfully
 int write_next_block(FILE_t* fp, uint8_t* buf, size_t to_write) {
     if (!fp) {return BAD_POINTER;}
-    if (to_write > File_Block_Len) {to_write = File_Block_Len;}
 
     FILE_Obj_t *f = (FILE_Obj_t*) fp;
+    if (!f->out_file) {return WRONG_MODE;}
     if (!buf) {
         buf = fp->buffer;
         if (to_write > fp->len) {to_write = fp->len;}

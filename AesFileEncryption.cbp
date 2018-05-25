@@ -70,6 +70,12 @@
 		<Unit filename="encrypt-file.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="verify-file.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="write-checksum.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Extensions>
 			<envvars />
 			<code_completion />
