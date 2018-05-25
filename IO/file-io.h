@@ -10,6 +10,14 @@ typedef struct {
     size_t len;         // Just there for reference
 } FILE_t;
 
+//Modes of opening the file:
+typedef enum {
+    F_READ,         // Open a single file for reading
+    F_WRITE,        // Open a single file for writing
+    F_READ_WRITE    // Open a file, copy it into a backup (for when reading), then overwrite the old file
+} FILEMODE;
+
+
 extern const size_t File_Block_Len;
 
 //When input file is the same as output file, then bytes are overwritten
@@ -22,18 +30,22 @@ void close_file(FILE_t* fp);
 
 //Reads the next block from the input file
 //
+//  If buf is null, then use fp->buf
+//
 //  The return is one of the following
 //      READ_ERROR      -> Unknown problem
 //      NO_ERROR        -> Process this block as normal
 //      END_OF_FILE     -> This is the last block in the file, bytes_read is less than total
-int read_next_block(FILE_t* fp, size_t* bytes_read);
+int read_next_block(FILE_t* fp, uint8_t* buf, size_t to_read, size_t* bytes_read);
 
 //Write a block to the output file
+//
+//  If buf is null, then use fp->buf
 //
 //  The return is either
 //      WRITE_ERROR     -> I don't know
 //      NO_ERROR        -> Bytes written successfully
-int write_next_block(FILE_t* fp, size_t to_write);
+int write_next_block(FILE_t* fp, uint8_t* buf, size_t to_write);
 
 
 //Error codes

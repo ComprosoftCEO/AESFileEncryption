@@ -84,22 +84,29 @@ static int backup_file(FILE_Obj_t* fp) {
 
 //Read a single AES block into the buffer
 //
+//  IF buf is null, then use fp->buf
+//
 //  The return is one of the following
 //      READ_ERROR      -> Unknown problem
 //      NO_ERROR        -> Process this block as normal
 //      END_OF_FILE     -> This is the last block in the file, bytes_read is less than total
-int read_next_block(FILE_t* fp, size_t* bytes_read) {
+int read_next_block(FILE_t* fp, uint8_t* buf, size_t to_read, size_t* bytes_read) {
     if (!(fp && bytes_read)) {return BAD_POINTER;}
 
     FILE_Obj_t* f = (FILE_Obj_t*) fp;
-    *bytes_read = fread(f->buffer,sizeof(uint8_t),File_Block_Len,f->in_file);
+    if (!buf) {
+        buf = fp->buffer;
+        if (to_read > fp->len) {to_read = fp->len;}
+    }
 
-    if (*bytes_read < File_Block_Len) {
+    *bytes_read = fread(buf,sizeof(uint8_t),to_read,f->in_file);
+
+    if (*bytes_read < to_read) {
         if (ferror(f->in_file)) {return READ_ERROR;}
 
         //We're at the end of the file, so fill in
         //  the remaining space with 0's
-        memset(((uint8_t*) f->buffer) + *bytes_read,0,(File_Block_Len - *bytes_read));
+        memset(((uint8_t*) buf) + *bytes_read,0,(to_read - *bytes_read));
         return END_OF_FILE;
     }
 
@@ -109,19 +116,24 @@ int read_next_block(FILE_t* fp, size_t* bytes_read) {
 
 //Write a block to the output file
 //
+//  If buf is null, then use fp->buf
+//
 //  The return is either
 //      WRITE_ERROR     -> I don't know
 //      NO_ERROR        -> Bytes written successfully
-int write_next_block(FILE_t* fp, size_t to_write) {
+int write_next_block(FILE_t* fp, uint8_t* buf, size_t to_write) {
     if (!fp) {return BAD_POINTER;}
     if (to_write > File_Block_Len) {to_write = File_Block_Len;}
 
     FILE_Obj_t *f = (FILE_Obj_t*) fp;
+    if (!buf) {
+        buf = fp->buffer;
+        if (to_write > fp->len) {to_write = fp->len;}
+    }
 
     //Write to the file
     //  If only a few bits are written, then write the remaining data
     size_t write = 0;
-    uint8_t* buf = f->buffer;
     while (write < to_write) {
         write += fwrite(buf,sizeof(uint8_t),to_write-write,f->out_file);
         if (write < to_write) {
