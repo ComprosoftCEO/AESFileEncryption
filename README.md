@@ -21,12 +21,13 @@ Open AesFileEncryption.cbp in Code::Blocks to edit the project and compile the c
 <br>
 
 ## Usage
-__afe (-e | -d) \[-r\] \<file\>__
+__afe (-e | -d | -v) \[-r\] \<in-file\> \[out-file\]__
 * -e = Encrypt file
 * -d = Decrypt file
-* -r = Replace the old file (optional)
+* -v = Verify encryption of \<in-file\> to confirm that password is correct
+* -r = Remove the backup file (only if \[out-file\] isn't specified)
 
-If -r is not specified, the new file will be named \<file\>.d or \<file\>.e
+If \[out-file\] isn't specified, then encryption or decryption overwrites \<in-file\>. However, a backup is created named \<in-file\>.bak.
 
 <br>
 
