@@ -10,14 +10,6 @@ typedef struct {
     size_t len;         // Just there for reference
 } FILE_t;
 
-//Modes of opening the file:
-typedef enum {
-    F_READ,         // Open a single file for reading
-    F_WRITE,        // Open a single file for writing
-    F_READ_WRITE    // Open a file, copy it into a backup (for when reading), then overwrite the old file
-} FILEMODE;
-
-
 extern const size_t File_Block_Len;
 
 //When input file is the same as output file, then bytes are overwritten

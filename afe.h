@@ -4,15 +4,13 @@
 #include <stdio.h>
 #include <file-io.h>
 
-int encrypt_file(FILE* input, FILE* output, const char* key);
-int decrypt_file(FILE* input, FILE* output, const char* key);
+#define END_BYTE 0x80
+
+int encrypt_file(FILE_t* fp, const char* key);
+int decrypt_file(FILE_t* fp, const char* key);
 
 char* get_password(const char*);
 void hide_output();
 void restore_output();
-
-
-
-
 
 #endif // AES_FILE_ENCRYPTION_HEADER Included
