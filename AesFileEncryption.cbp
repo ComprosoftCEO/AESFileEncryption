@@ -38,6 +38,18 @@
 			<Add library="readline" />
 			<Add library="history" />
 		</Linker>
+		<Unit filename="Algorithm/decrypt-file.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Algorithm/encrypt-file.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Algorithm/verify-file.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Algorithm/write-checksum.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="Crypto/aes.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -64,18 +76,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="afe.h" />
-		<Unit filename="decrypt-file.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="encrypt-file.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="verify-file.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="write-checksum.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Extensions>
 			<envvars />
 			<code_completion />
