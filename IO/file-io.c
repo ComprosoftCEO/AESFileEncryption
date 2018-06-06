@@ -87,8 +87,18 @@ void close_file(FILE_t* fp, CLOSE_ACTION action) {
     FILE_Obj_t* f = (FILE_Obj_t*) fp;
     if (f->buffer) {free(f->buffer);}
     if (f->backup_filename) {
-        if (action == C_REMOVE) {remove(f->backup_filename);}
-        if (action == C_UNDO) {copy_file(f->in_file,f->out_file);}
+        switch(action) {
+            case C_NOTHING: break;
+            case C_UNDO:
+                //Copy file before removing backup (we do NOT want a break here)
+                copy_file(f->in_file,f->out_file);
+
+            case C_REMOVE:
+                //Backup is always the input file
+                //  On Windows, you need to close the file before you can remove it
+                if (f->in_file) {fclose(f->in_file); f->in_file = NULL;}
+                remove(f->backup_filename);
+        }
         free(f->backup_filename);
     }
     if (f->in_file)  {fclose(f->in_file);}
